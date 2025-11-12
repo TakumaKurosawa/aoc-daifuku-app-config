@@ -43,10 +43,10 @@ jobs:
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
         id: update-version-pr
         with:
-          title: "[stg] Update DB migrator (including dbmigrator-2) to version ${{ inputs.version }}"
-          commit-message: "[stg] Update db migrator (including dbmigrator-2) to version ${{ inputs.version }}"
+          title: "[stg] Update DB migrator to version ${{ inputs.version }}"
+          commit-message: "[stg] Update db migrator to version ${{ inputs.version }}"
           body: |
-            Update DB migrator (including dbmigrator-2) to version ${{ inputs.version }}
+            Update DB migrator to version ${{ inputs.version }}
           branch: "stg-update-dbmigrator-to-${{ inputs.version }}"
           token: ${{ steps.app-token.outputs.token }}
           delete-branch: true
