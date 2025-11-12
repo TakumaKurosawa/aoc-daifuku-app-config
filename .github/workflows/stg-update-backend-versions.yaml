@@ -1,0 +1,88 @@
+name: Stg / Update backend versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version"
+        required: true
+        type: string
+
+      configuration:
+        description: "Configuration JSON for backend applications"
+        required: true
+        type: string
+        default: '{"admin-api":true,"customer-api":true,"customer-api-2":true,"operator":true,"gateway":true,"internal-gateway":true,"fake-external-service":false,"loadtest-workload":true,"loadtest-runner":true,"cronjob":true, "oneshot":true, "data-pipeline":true}'
+
+jobs:
+  update-version-stg-dbmigrator:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Create temporary access token by GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Update version
+        run: |
+          CONFIGURATION='{"dbmigrator":true,"dbmigrator-2":true}'
+          APP_LIST=$(echo "$CONFIGURATION" | jq -r 'to_entries | map(select(.value == true) | .key) | join(",")')
+          ./.github/scripts/update_backend_version.sh "$APP_LIST" stg ${{ inputs.version }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        id: update-version-pr
+        with:
+          title: "[stg] Update DB migrator (including dbmigrator-2) to version ${{ inputs.version }}"
+          commit-message: "[stg] Update db migrator (including dbmigrator-2) to version ${{ inputs.version }}"
+          body: |
+            Update DB migrator (including dbmigrator-2) to version ${{ inputs.version }}
+          branch: "stg-update-dbmigrator-to-${{ inputs.version }}"
+          token: ${{ steps.app-token.outputs.token }}
+          delete-branch: true
+
+  update-version-stg-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Create temporary access token by GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Update version
+        run: |
+          CONFIGURATION='${{ github.event.inputs.configuration }}'
+          APP_LIST=$(echo "$CONFIGURATION" | jq -r 'to_entries | map(select(.value == true) | .key) | join(",")')
+          ./.github/scripts/update_backend_version.sh "$APP_LIST" stg ${{ inputs.version }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        id: update-version-pr
+        with:
+          title: "[stg] Update backend applications to version ${{ inputs.version }}"
+          commit-message: "[stg] Update backend applications to version ${{ inputs.version }}"
+          body: |
+            Update backend applications to version ${{ inputs.version }}
+          branch: "stg-update-backend-to-${{ inputs.version }}"
+          token: ${{ steps.app-token.outputs.token }}
+          delete-branch: true
